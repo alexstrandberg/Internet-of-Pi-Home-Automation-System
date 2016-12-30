@@ -1,0 +1,24 @@
+PODS:
+  - ATHMultiSelectionSegmentedControl (0.2.1)
+  - Bolts/Tasks (1.8.4)
+  - MBProgressHUD (1.0.0)
+  - Parse (1.14.2):
+    - Bolts/Tasks (~> 1.8)
+  - SpinKit (1.2.0)
+
+DEPENDENCIES:
+  - ATHMultiSelectionSegmentedControl
+  - MBProgressHUD
+  - Parse
+  - SpinKit
+
+SPEC CHECKSUMS:
+  ATHMultiSelectionSegmentedControl: 9f574fc68f62639768fe9eeffb1a4ffcfe09eb25
+  Bolts: 8a7995239dbe724f9cba2248b766d48b7ebdd322
+  MBProgressHUD: 4890f671c94e8a0f3cf959aa731e9de2f036d71a
+  Parse: 4335d65f40cb3d43190d723144bbe1afb9c38230
+  SpinKit: 65906a8b534a4e14cbfd3f8b0b6c329131faef4a
+
+PODFILE CHECKSUM: 4191086c47d9d26bcc18c14013e7e4a124bf3b60
+
+COCOAPODS: 1.1.1
