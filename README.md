@@ -28,7 +28,7 @@ The code was written by Alex Strandberg and is licensed under the MIT License, c
 1. Install all of the external libraries linked at the bottom.
 2. Place an mp3 file with the name **alarm.mp3** to be used for the alarm feature.
 3. Follow this [tutorial](https://devcenter.heroku.com/articles/deploying-a-parse-server-to-heroku) to set up a Parse Server instance on Heroku for free.  Choose a secure APPLICATION_ID and make a note of this, along with the server URL. 
-4. Pace the [main.js](main.js) file in the cloud folder of the Parse Server files.
+4. Place the [main.js](main.js) file in the cloud folder of the Parse Server files.
 5. Deploy the newly-added code to Heroku (from the dashboard).
 6. Set the Server URL and Application ID in [homeautomationsystem.py](home_automation_system/homeautomationsystem.py) and [AppDelegate.swift](iOS App/Internet of Pi/AppDelegate.swift) based on your Parse configuration.  
 7. Install [Parse Dashboard](https://github.com/ParsePlatform/parse-dashboard).
