@@ -23,8 +23,6 @@ Parse.Cloud.define("processScheduling", function(req, res) {
             schedule.save();
         });
 
-        res.success({});
-
         var endQuery = new Parse.Query("Schedule");
         endQuery.lessThan("end", now);
         endQuery.include("appliance");
