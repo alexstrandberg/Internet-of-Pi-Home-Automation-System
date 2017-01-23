@@ -39,7 +39,7 @@ class HomeAutomationSystem:
         _appliances     [Queryset of Appliance objects, ordered by applianceId.]
         _config         [Settings object: Settings store in Parse.]
         _serialComm     [SerialComm instance: for communication with Arduino.]
-        _requestData    [Boolean: True if new sensor data should be requested from Arduino, False otherwise. Alternates every iteration of main loop.]
+        _loopCounter    [Int: 0 if new sensor data should be requested from Arduino, 3 if cloud functions should run. Increments every iteration of loop (0-3).]
         _lastTime       [time object: Used to check if daylight savings time change has occurred.]
         _running        [Boolean: Flag used to determine if system should keep running (True), False otherwise.]
     """
@@ -60,7 +60,7 @@ class HomeAutomationSystem:
         else:
             self._config = config[0]
         self._serialComm = None
-        self._requestData = True
+        self._loopCounter = 0
         self._lastTime = time.localtime()
         self._running = True
         if len(self._appliances) == 0: # When the system is run for the first time, initialize the appliances
@@ -121,48 +121,49 @@ class HomeAutomationSystem:
         Checks if alarms should go off (Controls instance) or system settings have changed.
         Can sync Arduino and Raspberry Pi's clocks, or shutdown/reboot pi if instructed to from Parse.
         """
-        processScheduling()
-
-        self._appliances = Appliance.Query.all().order_by('applianceId')
-        self._serialComm.updateAppliances(self._appliances)
         self._serialComm.readFromSerial()
-        if self._requestData: # Request data every other iteration of the loop
+        if self._loopCounter == 0: # Request data every 4 iterations of the loop
             self._serialComm.requestSensorData()
-            self._requestData = False
-        else:
-            self._requestData = True
-        processAlarms()
-        alarms = Alarm.Query.filter(soundAlarm=True)
-        for alarm in alarms:
-            alarm.soundAlarm = False
-            alarm.save()
-            if not alarm.repeats:
-                alarm.delete()
-            self._controls.playAlarm()
-            self._serialComm.setDisplayMode(DISPLAY_IGNORE)
+            self._loopCounter += 1
+        elif self._loopCounter != 3:
+            self._loopCounter += 1
+        else: # self._loopCounter == 3
+            self._loopCounter = 0
+            processScheduling()
+            self._appliances = Appliance.Query.all().order_by('applianceId')
+            self._serialComm.updateAppliances(self._appliances)
+            processAlarms()
+            alarms = Alarm.Query.filter(soundAlarm=True)
+            for alarm in alarms:
+                alarm.soundAlarm = False
+                alarm.save()
+                if not alarm.repeats:
+                    alarm.delete()
+                self._controls.playAlarm()
+                self._serialComm.setDisplayMode(DISPLAY_IGNORE)
+            self._config = Settings.Query.all()[0]
+            newTime = time.localtime()
+            # Detect daylight savings change and update Arduino clock if needed
+            if self._lastTime.tm_isdst != newTime.tm_isdst or self._config.systemFlag == 'updateDateTime':
+                self._serialComm.syncTime()
+                if self._config.systemFlag == 'updateDateTime':
+                    self._config.systemFlag = 'running'
+                    self._config.save()
+            self._lastTime = newTime
+            self._serialComm.syncSettings(self._config)
+            if self._config.systemFlag == 'shutdownPi':
+                self._config.systemFlag = 'running' # When the script runs again, the script knows to run
+                self._config.save()
+                self._running = False
+                os.system('/sbin/shutdown -h now')
+            elif self._config.systemFlag == 'rebootPi':
+                self._config.systemFlag = 'running'  # When the script runs again, the script knows to run
+                self._config.save()
+                self._running = False
+                os.system('/sbin/shutdown -r now')
+            self._controls.update(self._appliances, self._serialComm.getLastSensorData(), self._config)
         if self._controls.checkAlarmFinished():
             self._serialComm.setDisplayMode(DISPLAY_CLEAR_WHEN_DARK)
-        self._config = Settings.Query.all()[0]
-        newTime = time.localtime()
-        # Detect daylight savings change and update Arduino clock if needed
-        if self._lastTime.tm_isdst != newTime.tm_isdst or self._config.systemFlag == 'updateDateTime':
-            self._serialComm.syncTime()
-            if self._config.systemFlag == 'updateDateTime':
-                self._config.systemFlag = 'running'
-                self._config.save()
-        self._lastTime = newTime
-        self._serialComm.syncSettings(self._config)
-        if self._config.systemFlag == 'shutdownPi':
-            self._config.systemFlag = 'running' # When the script runs again, the script knows to run
-            self._config.save()
-            self._running = False
-            os.system('/sbin/shutdown -h now')
-        elif self._config.systemFlag == 'rebootPi':
-            self._config.systemFlag = 'running'  # When the script runs again, the script knows to run
-            self._config.save()
-            self._running = False
-            os.system('/sbin/shutdown -r now')
-        self._controls.update(self._appliances, self._serialComm.getLastSensorData(), self._config)
         if self._controls.checkForceDisplayOn():
             self._serialComm.setDisplayMode(DISPLAY_IGNORE)
         elif self._controls.checkForceDisplayOff():
