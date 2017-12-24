@@ -179,6 +179,8 @@ String lightSensorMode = "CLEAR_WHEN_DARK"; // How the light sensor data is used
                                             // DISABLE_WHEN_DARK clears and disables the matrix from displaying info again once the light level is below the threshold (for nighttime)
                                             // IGNORE keeps the matrix displaying info regardless of light levels (when an alarm goes off)
 
+const int lightSensorMaxVisibleValue = 9999; // If the calculation of the amount of visible light exceeds this number, then there is actually no visible light
+
 void setup() {
   Serial.begin(9600); // Initialize the serial port
   clock.begin();
@@ -220,7 +222,8 @@ void loop() {
   uint16_t ir, full;
   ir = lum >> 16;
   full = lum & 0xFFFF;
-  if (full-ir < lightThreshold && lightSensorMode != "IGNORE") {
+  int visible = full - ir < lightSensorMaxVisibleValue ? full - ir : 0;
+  if (visible < lightThreshold && lightSensorMode != "IGNORE") {
     if (!newMatrixPrint) {
       newMatrixPrint = true;
       matrix.fillScreen(0);
@@ -351,7 +354,7 @@ void loop() {
               message += String(digitalRead(REED_SWITCH_PIN)) + ',';
               message += String(digitalRead(FOOT_SWITCH_PIN)) + ',';
               message += String(tempString) + ',';
-              message += String(humString) + ',' + String(full-ir);
+              message += String(humString) + ',' + String(visible);
               for (int k = 0; k < NUM_APPLIANCES; k++) {
                 message += ',' + String(digitalRead(APPLIANCE_PINS[k]));
               }
@@ -365,7 +368,7 @@ void loop() {
               dtostrf(sht31.readHumidity(), 3, 2, humString);
               String message = "SENSOR!" + String(numParams) + '@';
               message += String(tempString) + ',';
-              message += String(humString) + ',' + String(full-ir) + ',';
+              message += String(humString) + ',' + String(visible) + ',';
               if (doorOpen) message += "OPENED,";
               else message += "CLOSED,";
               if (footSwitchPressed) message += "PRESSED";
